@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>FitBreak</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-router-dom@5.2.0/umd/react-router-dom.min.js" crossorigin></script>
+   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- React Toastify per le notifiche -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-toastify@9/dist/ReactToastify.css">
+    <script src="https://cdn.jsdelivr.net/npm/react-toastify@9/dist/react-toastify.umd.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/javascript">
+        var HashRouter = ReactRouterDOM.HashRouter;
+        var Route = ReactRouterDOM.Route;
+        var Link = ReactRouterDOM.Link;
+        var Switch = ReactRouterDOM.Switch;
+
+        // Componente HomePage
+        function Dopage() {
+            return React.createElement(
+                'div',
+                { className: 'hero' },
+                React.createElement('h1', null, 'BENVENUTO SU FITBREAK'),
+                React.createElement('p', null, 'Pause intelligenti, esercizi mirati, risultati misurabili'),
+                React.createElement(
+                    'div',
+                    { className: 'action-buttons' },
+                    React.createElement(
+                        Link,
+                        { to: '/react/register', className: 'btn btn-primary' },
+                        'Registrati'
+                    ),
+                    React.createElement(
+                        Link,
+                        { to: '/react/login', className: 'btn btn-secondary' },
+                        'Accedi'
+                    )
+                )
+            );
+        }
+
+        function ExerciseSection() {
+            var type  = ReactRouterDOM.useParams().type;
+            var[dataex,setdataex]=React.useState('def');
+            var duration = ReactRouterDOM.useParams().breaktime;
+            var navigate = ReactRouterDOM.useHistory();
+            var { user }= React.useContext(UserContext);
+
+            //api per prendere i dati dell'esercizio
+            React.useEffect(() => {
+                if (!type) return; // Evita di fare una richiesta se `type` non è definito
+
+                fetch('/api/exercise/' + type)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Errore nella fetch: ${response.status} ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        data.duration = parseInt(data.duration, 10);
+                        setdataex(data);
+                        console.log(data);
+                    })
+                    .catch(error => console.error("Errore nel recuperare i dati:", error));
+            }, [type]); // Aggiunto `type` nelle dipendenze
+
+            //funzione per aggiungere progressi
+            var addProgress = async function () {
+                        var response = await fetch('/api/progres', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_user: user.iduser,
+                        exercise_id:0,
+                        completed: 1
+                    })
+                });
+                var data = await response.json();
+                if (response.ok) {
+                    alert("Progresso aggiunto!");
+                    navigate.goBack();
+                    loadProgress();
+                } else {
+                    alert(data.error || "Errore durante l'aggiunta del progresso");
+                }
+            };
+
+
+            return React.createElement(
+                'div',
+                { className: `exercise-page` },
+                React.createElement('h3', null, dataex.name),
+                React.createElement('p', null, dataex.description),
+                React.createElement('img', { src: dataex.image_url, alt: dataex.name }),
+                React.createElement(Timer, { duration: duration }),
+                React.createElement('button', {onClick:()=>addProgress()}, 'FINE')
+            );
+        }
+
+
+
+        function Timer({ duration }) {
+            var [timeLeft, setTimeLeft] = React.useState(duration * 60); // Convert minutes to seconds
+            var [isPaused, setIsPaused] = React.useState(false);
+
+            React.useEffect(() => {
+                if (timeLeft <= 0 || isPaused) return;
+
+                var timerId = setInterval(() => {
+                    setTimeLeft(prevTimeLeft => prevTimeLeft > 0 ? prevTimeLeft - 1 : 0);
+                }, 1000);
+
+                return () => clearInterval(timerId);
+            }, [timeLeft, isPaused]);
+
+            var handlePause = () => {
+                setIsPaused(!isPaused);
+            };
+
+            var minutes = Math.floor(timeLeft / 60);
+            var seconds = timeLeft % 60;
+
+            return React.createElement(
+                'div',
+                { className: 'timer' },
+                React.createElement('h3', null, 'Break Timer'),
+                React.createElement('p', null, `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`),
+                React.createElement('button', { onClick: handlePause }, isPaused ? 'Resume' : 'Pause'),
+            );
+        }
+
+        function HomePage() {
+            var [weeklyProgress, setWeeklyProgress] = React.useState(0);
+            var [totalProgress, setTotalProgress] = React.useState(0);
+            var navigate = ReactRouterDOM.useHistory();
+            var { user } = React.useContext(UserContext);
+
+
+            var handleExerciseClick = function (type) {
+                navigate.push(`/exercise/${type}/${user.break_duration}/${user.iduser}`);
+            };
+
+            // Funzione per caricare i progressi
+            var loadProgress = async function () {
+                console.log("Caricamento progressi...");
+                var response = await fetch(`/api/progress?id=${user.iduser}`); // Sostituisci con l'ID dell'utente loggato
+                var data = await response.json();
+                setWeeklyProgress(data.weekly_progress);
+                setTotalProgress(data.total_progress);
+                console.log("I tuoi progressi sono stati caricati!");
+            };
+            // Carica i progressi all'avvio
+            React.useEffect(function () {
+                if(user){
+                loadProgress();}
+            }, [user]);
+            //in caso si faccia il refresch
+            if(!user){
+                return React.createElement('h1',null,'Caricamento...')
+            }
+
+
+            return React.createElement(
+                'div',
+                {className: 'home-container'},
+
+                // Hamburger Menu
+                React.createElement(HamburgerMenu,null),
+                // Container principale diviso in due colonne
+                React.createElement('div', {className: 'split-container'},
+                    // Colonna sinistra (Progressi)
+                    React.createElement('div', {className: 'progress-column'},
+                        React.createElement('h1', null, 'Ciao, ', user.name),
+                        React.createElement('p', null, 'Ecco i tuoi progressi'),
+                        React.createElement('div', {className: 'progress-ring-container'},
+                            React.createElement('div', {className: 'progress-ring'},
+                                React.createElement('h2', null, 'Settimana'),
+                                React.createElement('div', {className: 'ring'},weeklyProgress )
+                            ),
+                            React.createElement('br',null,null),
+                            React.createElement('div', {className: 'progress-ring'},
+                                React.createElement('h2', null, 'Totali'),
+                                React.createElement('div', {className: 'ring'}, totalProgress)
+                            )
+                        )
+                    ),
+
+                    // Colonna destra (Esercizi)
+                    React.createElement('div', {className: 'exercises-column'},
+                        // Sezione Stretching
+                        React.createElement('div', {className: 'exercise-section stretching'},
+                            React.createElement('h3', null, 'Stretching'),
+                            React.createElement('p', null, 'Esercizi di allungamento'),
+                            React.createElement('button', { onClick: ()=> handleExerciseClick('stretching') }, 'AVVIA')
+                        ),
+
+                        React.createElement('div', {className: 'exercise-section cardio'},
+                            React.createElement('h3', null, 'Camminata'),
+                            React.createElement('p', null, 'Camminata leggera'),
+                            React.createElement('button', {onClick: ()=> handleExerciseClick('walk') }, 'AVVIA')
+                        ),
+
+                        // Sezione Corpo Libero
+                        React.createElement('div', {className: 'exercise-section bodyweight'},
+                            React.createElement('h3', null, 'Corpo Libero'),
+                            React.createElement('p', null, 'Esercizi a corpo libero'),
+                            React.createElement('button', {onClick: ()=> handleExerciseClick('corpo_libero') }, 'AVVIA')
+                        )
+                    )
+                )
+            );
+        }
+        function HamburgerMenu() {
+            const [isOpen, setIsOpen] = React.useState(false);
+            const menuRef = React.useRef(null);//agganci il menu a tendiana nel dom
+            const navigate = ReactRouterDOM.useHistory();
+
+            const toggleMenu = () => {
+                setIsOpen(!isOpen);
+            };
+
+            const openSettings = () => {
+                navigate.push('/settings');
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem("userData");
+                navigate.push('/');
+            };
+
+      // Chiude il menu se il click è esterno con un event listener
+      React.useEffect(() => {
+          const handleClickOutside = (event) => {
+              if (menuRef.current && !menuRef.current.contains(event.target)) {
+                  setIsOpen(false);
+              }
+          };
+
+          //se il menù e aperto metto il listener una volta che si chiude lo tolgo per evitare problemi
+          if (isOpen) {
+              document.addEventListener('mousedown', handleClickOutside);
+          } else {
+              document.removeEventListener('mousedown', handleClickOutside);
+          }
+
+          // Pulizia dell'event listener
+          return () => {
+              document.removeEventListener('mousedown', handleClickOutside);
+          };
+      }, [isOpen]);
+
+      return React.createElement(
+          'div',
+          { className: 'hamburger-menu', ref: menuRef },
+          React.createElement(
+              'div',
+              { className: 'menu-icon', onClick: toggleMenu },
+              React.createElement('div', { className: 'menu-line' }),
+              React.createElement('div', { className: 'menu-line' }),
+              React.createElement('div', { className: 'menu-line' })
+          ),
+          isOpen && React.createElement(
+              'div',
+              { className: 'dropdown-menu' },
+              React.createElement(
+                  'button',
+                  { onClick: openSettings },
+                  'Impostazioni'
+              ),
+              React.createElement(
+                  'button',
+                  { onClick: handleLogout },
+                  'Logout'
+              )
+          )
+      );
+  }
+
+
+        //Pagina delle impostazioni
+        function SettingsPage() {
+            var { user } = React.useContext(UserContext);
+            var [breakDuration, setBreakDuration] = React.useState(user.break_duration || 5);
+            var [morningTime, setMorningTime] = React.useState(user.morning_time || '09:00');
+            var [afternoonTime, setAfternoonTime] = React.useState(user.afternoon_time || '14:00');
+            var [eveningTime, setEveningTime] = React.useState(user.evening_time || '18:00');
+            var navigate = ReactRouterDOM.useHistory();
+   
+
+
+            // Funzione di applicazione cambiamenti
+            function handleChanges() {
+                fetch(`/api/update-settings`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: user.iduser,
+                        break_duration: breakDuration,
+                        morning_time: morningTime,
+                        afternoon_time: afternoonTime,
+                        evening_time: eveningTime
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success) {
+                            alert(data.message);
+                            // Aggiorna il contesto utente se necessario
+                            user.morning_time=morningTime
+                            user.afternoon_time=afternoonTime
+                            user.evening_time=eveningTime
+                            handleBack()
+                        } else {
+                            alert(data.error || "Errore durante l'aggiornamento");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Errore:", error);
+                        alert("Si è verificato un errore durante il salvataggio");
+                    });
+            }
+
+            // Funzione per tornare indietro
+            function handleBack() {
+                user.afternoon_time=afternoonTime
+                user.morning_time=morningTime
+                user.evening_time=eveningTime
+                user.break_duration=breakDuration
+                navigate.goBack();
+            }
+
+            return React.createElement('div',
+                { className: 'form' },
+                React.createElement('h2', null, 'MODIFICA ORARI'),
+                React.createElement('select', {
+                        value: breakDuration,
+                        onChange: (e) => setBreakDuration(parseInt(e.target.value))
+                    },
+                    React.createElement('option', { value: 5 }, '5 minuti'),
+                    React.createElement('option', { value: 10 }, '10 minuti')
+                ),
+                React.createElement('input', {
+                    type: 'time',
+                    value: morningTime,
+                    onChange: (e) => setMorningTime(e.target.value)
+                }),
+                React.createElement('input', {
+                    type: 'time',
+                    value: afternoonTime,
+                    onChange: (e) => setAfternoonTime(e.target.value)
+                }),
+                React.createElement('input', {
+                    type: 'time',
+                    value: eveningTime,
+                    onChange: (e) => setEveningTime(e.target.value)
+                }),
+                React.createElement('button', { onClick: handleChanges }, 'APPLICA CAMBIAMENTI'),
+                React.createElement('button', { onClick: handleBack }, 'INDIETRO')
+            );
+        }
+
+
+
+        function RegisterForm() {
+            var [name, setName] = React.useState('');
+            var [email, setEmail] = React.useState('');
+            var [password, setPassword] = React.useState('');
+            var [breakDuration, setBreakDuration] = React.useState(5);
+            var [morningTime, setMorningTime] = React.useState('09:00');
+            var [afternoonTime, setAfternoonTime] = React.useState('14:00');
+            var [eveningTime, setEveningTime] = React.useState('18:00');
+            var [errors, setErrors] = React.useState({});
+            var navigate = ReactRouterDOM.useHistory();
+
+            var validateForm = function () {
+                var errors = {};
+
+                if (!name.trim()) {
+                    errors.name = "Il nome è obbligatorio";
+                }
+                if (!email.trim()) {
+                    errors.email = "L'email è obbligatoria";
+                } else if (!/\S+@\S+\.\S+/.test(email)) {
+                    errors.email = "L'email non è valida";
+                }
+                if (!password.trim()) {
+                    errors.password = "La password è obbligatoria";
+                } else if (password.length < 6) {
+                    errors.password = "La password deve contenere almeno 6 caratteri";
+                }
+                setErrors(errors);
+                return Object.keys(errors).length === 0; // Restituisce true se non ci sono errori
+            };
+
+            var handleRegister = async function () {
+                if (!validateForm()) {
+                    alert("Compila correttamente campi mancanti");
+                    return; // Interrompe la registrazione se ci sono errori
+                }
+
+                var response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        break_duration: breakDuration,
+                        morning_time: morningTime,
+                        afternoon_time: afternoonTime,
+                        evening_time: eveningTime
+                    })
+                });
+                var data = await response.json();
+                if (response.ok) {
+                    alert("Registrazione completata!");
+                    // Reindirizza alla homepage o gestisci lo stato dell'utente
+                    navigate.push('/home')
+                } else {
+                    alert(data.error || "Errore durante la registrazione");
+                }
+            };
+
+            return React.createElement(
+                'div',
+                { className: 'form' },
+                React.createElement('h2', null, 'Registrati'),
+                React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Nome',
+                    value: name,
+                    onChange: function (e) { return setName(e.target.value); }
+                }),
+                errors.name && React.createElement('p', { className: 'error' }, errors.name),
+                React.createElement('input', {
+                    type: 'email',
+                    placeholder: 'Email',
+                    value: email,
+                    onChange: function (e) { return setEmail(e.target.value); }
+                }),
+                errors.email && React.createElement('p', { className: 'error' }, errors.email),
+                React.createElement('input', {
+                    type: 'password',
+                    placeholder: 'Password',
+                    value: password,
+                    onChange: function (e) { return setPassword(e.target.value); }
+                }),
+                errors.password && React.createElement('p', { className: 'error' }, errors.password),
+                React.createElement('select', {
+                        value: breakDuration,
+                        onChange: function (e) { return setBreakDuration(parseInt(e.target.value)); }
+                    },
+                    React.createElement('option', { value: 5 }, '5 minuti'),
+                    React.createElement('option', { value: 10 }, '10 minuti')
+                ),
+                React.createElement('input', {
+                    type: 'time',
+                    value: morningTime,
+                    onChange: function (e) { return setMorningTime(e.target.value); }
+                }),
+                React.createElement('input', {
+                    type: 'time',
+                    value: afternoonTime,
+                    onChange: function (e) { return setAfternoonTime(e.target.value); }
+                }),
+                React.createElement('input', {
+                    type: 'time',
+                    value: eveningTime,
+                    onChange: function (e) { return setEveningTime(e.target.value); }
+                }),
+                errors.time && React.createElement('p', { className: 'error' }, errors.time),
+                React.createElement('button', { onClick: handleRegister }, 'Registrati')
+            );
+        }
+        const UserContext = React.createContext();
+
+        function UserProvider(props) {
+            const [user, setUser] = React.useState(null);
+
+            // Funzione per aggiornare lo stato globale
+            const updateUser = (userData) => {
+                    setUser(userData);
+                    localStorage.setItem("userData",JSON.stringify(userData))//salvo dati utente il local
+            };
+            React.useEffect(() => {
+                const savedUser = localStorage.getItem("userData");
+                if (savedUser) {
+                    setUser(JSON.parse(savedUser)); // Ripristina se c'è uno stato salvato
+                }
+            }, []);
+            return React.createElement(
+                UserContext.Provider,
+                { value: { user, updateUser } }, // Espone solo user e updateUser
+                props.children
+            );
+
+        }
+
+        // Componente LoginForm
+        function LoginForm() {
+            var [email, setEmail] = React.useState('');
+            var [password, setPassword] = React.useState('');
+            var navigate = ReactRouterDOM.useHistory();
+            var { updateUser } = React.useContext(UserContext); // Ottieni la funzione dal contesto
+
+            var handleLogin = async function () {
+                var response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email, password: password})
+                });
+                var data = await response.json();
+                if (response.ok) {
+                    updateUser(data); // Inizializza lo stato globale
+                    navigate.push(`/home/${data.iduser}`);
+                } else {
+                    alert(data.error || "Email o password non validi");
+                }
+            };
+
+            return React.createElement('div',{ className: 'dialog' },React.createElement(
+                'form',
+                { className: 'form' },
+                React.createElement('h2', null, 'Accedi'),
+                React.createElement('input', {
+                    type: 'email',
+                    placeholder: 'Email',
+                    value: email,
+                    onChange: function (e) { return setEmail(e.target.value); }
+                }),
+                React.createElement('input', {
+                    type: 'password',
+                    placeholder: 'Password',
+                    value: password,
+                    onChange: function (e) { return setPassword(e.target.value); }
+                }),
+                React.createElement('button', { className:'dropdown-item d-flex align-items-center', onClick: handleLogin }, 'Accedi')
+            ));
+        }
+
+
+        // Componente principale dell'app
+   function App() {
+    return React.createElement(
+        UserProvider,
+        null,
+        React.createElement(
+            HashRouter,
+            null,
+            React.createElement(
+                Switch,
+                null,
+                React.createElement(Route, { exact: true, path: '/', component: Dopage }),
+                React.createElement(Route, { exact: true, path: '/home/:iduser', component: HomePage }),
+                React.createElement(Route, { exact: true, path: '/exercise/:type/:breaktime/:iduser', component: ExerciseSection }),
+                React.createElement(Route, { path: '/react/register', component: RegisterForm }),
+                React.createElement(Route, {path: '/settings', component: SettingsPage}),
+                React.createElement(Route, { path: '/react/login', component: LoginForm })
+            )
+        )
+    );
+}
+
+        // Render dell'app
+        var root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(React.createElement(App, null));
+    </script>
+</body>
+</html>
