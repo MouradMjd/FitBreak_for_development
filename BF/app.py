@@ -48,6 +48,7 @@ class User(db.Model):
     morning_time = db.Column(db.String(5))   # Orario della notifica mattutina
     afternoon_time = db.Column(db.String(5)) # Orario della notifica pomeridiana
     evening_time = db.Column(db.String(5))   # Orario della notifica serale
+    timezone = db.Column(db.String(64), default='UTC')
 #tabella per progressi
 class Progress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,8 +118,8 @@ def send_notification(user, time_slot):
 def check_notifications():
     """Controlla gli orari e invia le notifiche"""
     with app.app_context():
-        roma_tz = pytz.timezone('Europe/Rome')
-        now = dt.datetime.now(roma_tz).strftime("%H:%M")
+
+        print('e via'),
         users = User.query.filter(
             (User.morning_time != None) |
             (User.afternoon_time != None) |
@@ -126,18 +127,28 @@ def check_notifications():
         ).all()
 
         for user in users:
+            try:
+                user_tz = pytz.timezone(user.timezone or 'UTC')
+            except pytz.UnknownTimeZoneError:
+                user_tz = pytz.timezone('UTC')
+
+            user_now = dt.datetime.now(user_tz).strftime("%H:%M")
+
             matched = False
-            if user.morning_time == now:
+            if user.morning_time == user_now:
                 send_notification(user, 'morning')
                 matched = True
-            if user.afternoon_time == now and not matched:
+            if user.afternoon_time == user_now and not matched:
                 send_notification(user, 'afternoon')
                 matched = True
-            if user.evening_time == now and not matched:
+            if user.evening_time == user_now and not matched:
                 send_notification(user, 'evening')
+
+
 
 # Configurazione scheduler
 scheduler = BackgroundScheduler()
+
 scheduler.add_job(
     func=check_notifications,
     trigger='cron',
@@ -146,6 +157,29 @@ scheduler.add_job(
 )
 scheduler.start()
 
+
+# Funzione per verificare il numero di job attivi
+def check_active_jobs():
+    active_jobs = scheduler.get_jobs()
+    print(f"Numero di job attivi: {len(active_jobs)}")
+    for job in active_jobs:
+        print(f"Job: {job.id}, prossimo trigger: {job.next_run_time}")
+
+
+@app.route('/set_timezone', methods=['POST'])
+def set_timezone():
+    data = request.get_json()
+    tz_name = data.get('timezone')
+    user_id = data.get('user_id')  # supponendo che l'utente sia loggato
+
+    try:
+        pytz.timezone(tz_name)  # validazione
+        user = db.session.get(User, user_id)
+        user.timezone = tz_name
+        db.session.commit()
+        return jsonify({'message': 'Timezone salvata!'})
+    except pytz.UnknownTimeZoneError:
+        return jsonify({'error': 'Timezone non valida'}), 400
 
 def send_async_email(msg):
     with app.app_context():
@@ -404,6 +438,7 @@ def update_settings():
 @app.route('/')
 def home():
     #add_exercises()
+   #send_test_email()
     return render_template('index.html')
 
 #ultima route del file che reindirizza  di tutte le richieste non gestite da index.html

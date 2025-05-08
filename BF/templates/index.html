@@ -421,7 +421,7 @@
                 if (response.ok) {
                     alert("Registrazione completata!");
                     // Reindirizza alla homepage o gestisci lo stato dell'utente
-                    navigate.push('/home')
+                    navigate.push('/react/login')
                 } else {
                     alert(data.error || "Errore durante la registrazione");
                 }
@@ -516,13 +516,28 @@
                     body: JSON.stringify({email: email, password: password})
                 });
                 var data = await response.json();
+
                 if (response.ok) {
-                    updateUser(data); // Inizializza lo stato globale
+                    updateUser(data); // Inizializza stato globale
+
+                    //Ottieni la timezone dal browser
+                    var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+                    //Invia al backend
+                    await fetch('/set_timezone', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ timezone: timezone,user_id:data.iduser }),
+                        credentials: 'include' // importante se usi sessione lato server
+                    });
+
+                    //Vai alla home
                     navigate.push(`/home/${data.iduser}`);
                 } else {
                     alert(data.error || "Email o password non validi");
                 }
             };
+
 
             return React.createElement('div',{ className: 'dialog' },React.createElement(
                 'form',
