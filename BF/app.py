@@ -119,7 +119,7 @@ def check_notifications():
     """Controlla gli orari e invia le notifiche"""
     with app.app_context():
 
-        print('e via'),
+        print('prova'),
         users = User.query.filter(
             (User.morning_time != None) |
             (User.afternoon_time != None) |
@@ -449,4 +449,5 @@ def catch_all(path):
 
 # Avvia l'app
 if __name__ == '__main__':
-    app.run(debug=True)
+    #mettendo use_reloader=False per non avere un doppio avvio
+    app.run(debug=True,use_reloader=False)
