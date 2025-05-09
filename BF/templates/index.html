@@ -532,7 +532,8 @@
                     });
 
                     //Vai alla home
-                    navigate.push(`/home/${data.iduser}`);
+                    //aspetta che React aggiorni effettivamente lo stato
+                        navigate.push(`/home/${data.iduser}`);
                 } else {
                     alert(data.error || "Email o password non validi");
                 }
@@ -541,7 +542,12 @@
 
             return React.createElement('div',{ className: 'dialog' },React.createElement(
                 'form',
-                { className: 'form' },
+                { className: 'form',
+                    onSubmit: function (e) {
+                    //per prevenire che il bw ricarichi la pagina non iterrompendo la funzione handelLogin in react
+                        e.preventDefault();
+                        handleLogin();
+                    }},
                 React.createElement('h2', null, 'Accedi'),
                 React.createElement('input', {
                     type: 'email',
@@ -555,7 +561,7 @@
                     value: password,
                     onChange: function (e) { return setPassword(e.target.value); }
                 }),
-                React.createElement('button', { className:'dropdown-item d-flex align-items-center', onClick: handleLogin }, 'Accedi')
+                React.createElement('button', { className:'dropdown-item d-flex align-items-center', type:'submit'}, 'Accedi')
             ));
         }
 
