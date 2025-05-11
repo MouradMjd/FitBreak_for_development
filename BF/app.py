@@ -333,7 +333,7 @@ def get_user(id):
     })
 
 
-# TODO:Endpoint per aggiornare i dati utente
+#Endpoint per aggiornare i dati utente
 @app.route('/api/update-user', methods=['PUT'])
 def update_user(current_user):
     data = request.get_json()

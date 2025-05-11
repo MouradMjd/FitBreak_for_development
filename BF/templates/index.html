@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>FitBreak</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/logons.png') }}">
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-router-dom@5.2.0/umd/react-router-dom.min.js" crossorigin></script>
@@ -68,7 +69,7 @@
                         console.log(data);
                     })
                     .catch(error => console.error("Errore nel recuperare i dati:", error));
-            }, [type]); // Aggiunto `type` nelle dipendenze
+            }, [type]);
 
             //funzione per aggiungere progressi
             var addProgress = async function () {
@@ -149,7 +150,7 @@
             // Funzione per caricare i progressi
             var loadProgress = async function () {
                 console.log("Caricamento progressi...");
-                var response = await fetch(`/api/progress?id=${user.iduser}`); // Sostituisci con l'ID dell'utente loggato
+                var response = await fetch(`/api/progress?id=${user.iduser}`);
                 var data = await response.json();
                 setWeeklyProgress(data.weekly_progress);
                 setTotalProgress(data.total_progress);
@@ -218,7 +219,7 @@
         }
         function HamburgerMenu() {
             const [isOpen, setIsOpen] = React.useState(false);
-            const menuRef = React.useRef(null);//agganci il menu a tendiana nel dom
+            const menuRef = React.useRef(null);
             const navigate = ReactRouterDOM.useHistory();
 
             const toggleMenu = () => {
@@ -496,7 +497,7 @@
             }, []);
             return React.createElement(
                 UserContext.Provider,
-                { value: { user, updateUser } }, // Espone solo user e updateUser
+                { value: { user, updateUser } },
                 props.children
             );
 
@@ -532,7 +533,6 @@
                     });
 
                     //Vai alla home
-                    //aspetta che React aggiorni effettivamente lo stato
                         navigate.push(`/home/${data.iduser}`);
                 } else {
                     alert(data.error || "Email o password non validi");
@@ -567,26 +567,26 @@
 
 
         // Componente principale dell'app
-   function App() {
-    return React.createElement(
-        UserProvider,
-        null,
-        React.createElement(
-            HashRouter,
-            null,
-            React.createElement(
-                Switch,
+        function App() {
+            return React.createElement(
+                UserProvider,
                 null,
-                React.createElement(Route, { exact: true, path: '/', component: Dopage }),
-                React.createElement(Route, { exact: true, path: '/home/:iduser', component: HomePage }),
-                React.createElement(Route, { exact: true, path: '/exercise/:type/:breaktime/:iduser', component: ExerciseSection }),
-                React.createElement(Route, { path: '/react/register', component: RegisterForm }),
-                React.createElement(Route, {path: '/settings', component: SettingsPage}),
-                React.createElement(Route, { path: '/react/login', component: LoginForm })
-            )
-        )
-    );
-}
+                React.createElement(
+                    HashRouter,
+                    null,
+                    React.createElement(
+                        Switch,
+                        null,
+                        React.createElement(Route, { exact: true, path: '/', component: Dopage }),
+                        React.createElement(Route, { exact: true, path: '/home/:iduser', component: HomePage }),
+                        React.createElement(Route, { exact: true, path: '/exercise/:type/:breaktime/:iduser', component: ExerciseSection }),
+                        React.createElement(Route, { path: '/react/register', component: RegisterForm }),
+                        React.createElement(Route, {path: '/settings', component: SettingsPage}),
+                        React.createElement(Route, { path: '/react/login', component: LoginForm })
+                    )
+                )
+            );
+        }
 
         // Render dell'app
         var root = ReactDOM.createRoot(document.getElementById("root"));
