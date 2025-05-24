@@ -21,6 +21,7 @@ CORS(app)  # Abilita CORS per comunicare con React
 # Configurazione del database SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+#Collego SQLAlchemy alla mia app Flask
 db = SQLAlchemy(app)
 
 # Configurazione Flask-Mail
@@ -66,8 +67,8 @@ class Exercise(db.Model):
     image_url = db.Column(db.String(200))  # Link a un'immagine o video
 
 # Crea il database (esegui solo una volta)
-with app.app_context():
-    db.create_all()
+#with app.app_context():
+#   db.create_all()
 
 
 def get_exercise_by_time(time_slot):
@@ -119,7 +120,6 @@ def check_notifications():
     """Controlla gli orari e invia le notifiche"""
     with app.app_context():
 
-        print('prova'),
         users = User.query.filter(
             (User.morning_time != None) |
             (User.afternoon_time != None) |
@@ -222,10 +222,17 @@ def add_exercises():
         )
         db.session.add(exercise)
     db.session.commit()
+
 #funzione per eliminare un esercizio in base all'id
 def delete_exercises(id):
     for i in id:
         Exercise.query.filter_by(id=i).delete()
+    db.session.commit()
+
+# funzione per elimi un esercizio in base all'id
+def delete_user(id):
+    Progress.query.filter_by(user_id=id).delete()
+    User.query.filter_by(id=id).delete()
     db.session.commit()
 
 #API per registrazione
@@ -283,7 +290,6 @@ def get_exercises():
     } for ex in exercises])
 
 #api per aggiungere progresso
-
 @app.route('/api/progres', methods=['POST'])
 def add_progress():
     data = request.json
@@ -439,6 +445,7 @@ def update_settings():
 def home():
     #add_exercises()
    #send_test_email()
+    #delete_user()
     return render_template('index.html')
 
 #ultima route del file che reindirizza  di tutte le richieste non gestite da index.html

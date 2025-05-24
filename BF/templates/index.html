@@ -453,6 +453,9 @@
                     onChange: function (e) { return setPassword(e.target.value); }
                 }),
                 errors.password && React.createElement('p', { className: 'error' }, errors.password),
+
+                // Titolo per il timer
+                React.createElement('h3', null, 'Timer esercizi'),
                 React.createElement('select', {
                         value: breakDuration,
                         onChange: function (e) { return setBreakDuration(parseInt(e.target.value)); }
@@ -460,25 +463,37 @@
                     React.createElement('option', { value: 5 }, '5 minuti'),
                     React.createElement('option', { value: 10 }, '10 minuti')
                 ),
+
+                // Notifica mattino
+                React.createElement('label', null, 'Notifica mattino'),
                 React.createElement('input', {
                     type: 'time',
                     value: morningTime,
                     onChange: function (e) { return setMorningTime(e.target.value); }
                 }),
+
+                // Notifica pomeriggio
+                React.createElement('label', null, 'Notifica pomeriggio'),
                 React.createElement('input', {
                     type: 'time',
                     value: afternoonTime,
                     onChange: function (e) { return setAfternoonTime(e.target.value); }
                 }),
+
+                // Notifica sera
+                React.createElement('label', null, 'Notifica sera'),
                 React.createElement('input', {
                     type: 'time',
                     value: eveningTime,
                     onChange: function (e) { return setEveningTime(e.target.value); }
                 }),
+
                 errors.time && React.createElement('p', { className: 'error' }, errors.time),
                 React.createElement('button', { onClick: handleRegister }, 'Registrati')
             );
+
         }
+        //spazio condiviso fra tutti componenti react per dati utente
         const UserContext = React.createContext();
 
         function UserProvider(props) {
@@ -487,14 +502,16 @@
             // Funzione per aggiornare lo stato globale
             const updateUser = (userData) => {
                     setUser(userData);
-                    localStorage.setItem("userData",JSON.stringify(userData))//salvo dati utente il local
+                    localStorage.setItem("userData",JSON.stringify(userData))//salvo dati utente il localstorage
             };
+            //quando apri app e trovi gia dati nel localstorage li usi per user
             React.useEffect(() => {
                 const savedUser = localStorage.getItem("userData");
                 if (savedUser) {
                     setUser(JSON.parse(savedUser)); // Ripristina se c'è uno stato salvato
                 }
             }, []);
+            //uso il context provider per rendere disponibili i dati dell'utente
             return React.createElement(
                 UserContext.Provider,
                 { value: { user, updateUser } },
@@ -533,7 +550,7 @@
                     });
 
                     //Vai alla home
-                        navigate.push(`/home/${data.iduser}`);
+                        navigate.push(`/home`);
                 } else {
                     alert(data.error || "Email o password non validi");
                 }
@@ -578,7 +595,7 @@
                         Switch,
                         null,
                         React.createElement(Route, { exact: true, path: '/', component: Dopage }),
-                        React.createElement(Route, { exact: true, path: '/home/:iduser', component: HomePage }),
+                        React.createElement(Route, { exact: true, path: '/home', component: HomePage }),
                         React.createElement(Route, { exact: true, path: '/exercise/:type/:breaktime/:iduser', component: ExerciseSection }),
                         React.createElement(Route, { path: '/react/register', component: RegisterForm }),
                         React.createElement(Route, {path: '/settings', component: SettingsPage}),
