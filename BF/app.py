@@ -153,7 +153,7 @@ scheduler.add_job(
     func=check_notifications,
     trigger='cron',
     minute='*',
-    max_instances=1
+    max_instances=1 #limito esecuzione simultanea job a 1
 )
 scheduler.start()
 
@@ -229,7 +229,7 @@ def delete_exercises(id):
         Exercise.query.filter_by(id=i).delete()
     db.session.commit()
 
-# funzione per elimi un esercizio in base all'id
+# funzione per eliminare user in base all'id
 def delete_user(id):
     Progress.query.filter_by(user_id=id).delete()
     User.query.filter_by(id=id).delete()
